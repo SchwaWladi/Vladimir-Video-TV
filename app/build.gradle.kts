@@ -11,8 +11,8 @@ android {
         applicationId = "com.vladimir.video.tv"
         minSdk = 23
         targetSdk = 28
-        versionCode = 2
-        versionName = "1.0.1"
+        versionCode = 10
+        versionName = "1.0.9"
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -22,6 +22,7 @@ android {
 }
 
 dependencies {
+    implementation("androidx.core:core:1.13.1")
     implementation("com.github.bumptech.glide:glide:4.16.0")
     implementation("com.google.zxing:core:3.5.3")
     implementation("androidx.media3:media3-exoplayer:1.4.1")
