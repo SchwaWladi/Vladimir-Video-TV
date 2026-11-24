@@ -1,0 +1,61 @@
+name: Build Владимир Видео ТВ APK
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Restore permanent signing key
+        env:
+          ANDROID_DEBUG_KEYSTORE_B64: ${{ secrets.ANDROID_DEBUG_KEYSTORE_B64 }}
+        run: |
+          set -euo pipefail
+          umask 077
+          if [[ -z "${ANDROID_DEBUG_KEYSTORE_B64:-}" ]]; then
+            echo "::error::Add the ANDROID_DEBUG_KEYSTORE_B64 repository secret before building."
+            exit 1
+          fi
+          mkdir -p "$HOME/.android"
+          signing_file="$(mktemp "$HOME/.android/key.XXXXXX")"
+          trap 'rm -f "$signing_file"' EXIT
+          if ! printf '%s' "$ANDROID_DEBUG_KEYSTORE_B64" | tr -d '[:space:]' | base64 --decode > "$signing_file"; then
+            echo "::error::The signing secret must contain the complete Base64 key."
+            exit 1
+          fi
+          if ! keytool -list -keystore "$signing_file" -storepass android -alias androiddebugkey >/dev/null 2>&1; then
+            echo "::error::The decoded file is not the expected Android signing keystore."
+            exit 1
+          fi
+          mv "$signing_file" "$HOME/.android/debug.keystore"
+
+      - name: Assemble debug APK
+        run: gradle --no-daemon :app:assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Vladimir-Video-TV-${{ github.run_number }}
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
